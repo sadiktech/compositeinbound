@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <flow name="compositeinboundFlow">
+        <composite-source doc:name="Composite Source">
+            <http:listener config-ref="HTTP_Listener_Configuration" path="/CompositHttp" allowedMethods="POST" doc:name="HTTP"/>
+            <file:inbound-endpoint path="src\main\resources\file" moveToDirectory="src\main\resources" responseTimeout="10000" doc:name="File"/>
+            <vm:inbound-endpoint exchange-pattern="one-way" path="dataque" doc:name="dataque VM"/>
+        </composite-source>
+        <byte-array-to-string-transformer doc:name="Byte Array to String"/>
+        <choice doc:name="Choice">
+             <when expression="#[message.inboundProperties['MULE_ENDPOINT']]">
+                <logger message="VM #[payload]" level="INFO" doc:name="Vm Logger"/>
+            </when>
+            <when expression="#[message.inboundProperties['http.scheme']]">
+                <logger message="Http : #[payload]" level="INFO" doc:name="http Logger"/>
+            </when>
+            <when expression="#[message.inboundProperties['originalDirectory']]">
+                <logger message="File:  #[payload]" level="INFO" doc:name="file  Logger"/>
+            </when>
+            <otherwise>
+                <logger message="This data is not valid!!" level="INFO" doc:name="Else Logger"/>
+            </otherwise>
+        </choice>
+    </flow>
+    <flow name="compositeinboundFlow1">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/vmPostHttp" allowedMethods="POST" doc:name="HTTP"/>
+        <byte-array-to-string-transformer doc:name="Byte Array to String"/>
+        <set-payload value="Data sent to Vm #[payload]" doc:name="Set Payload"/>
+        <vm:outbound-endpoint exchange-pattern="one-way" path="dataque" doc:name="dataque VM"/>
+    </flow>
+</mule>
